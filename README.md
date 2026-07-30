@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://i.ibb.co/szk7dkn/imgnurd.webp" alt="imgnurd Logo" width="160" />
+  <img src="https://i.ibb.co/szk7dkn/imgnurd.webp" alt="imgnurd Logo" width="300" />
   <h1>img<span style="color: #FFD600;">nurd</span></h1>
   <p><strong>Lightweight, automatic Docker container update manager & notification engine.</strong></p>
 </div>
@@ -36,9 +36,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+```
 
 Run to start
 
-```docker compose up -d
+```
+docker compose up -d
+```
 
 Access the dashboard at http://localhost:3000
