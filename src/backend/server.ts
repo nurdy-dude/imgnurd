@@ -46,7 +46,6 @@ app.post('/api/containers/:id/update', async (req, res) => {
   }
 });
 
-// Logs Endpoint
 app.get('/api/containers/:id/logs', async (req, res) => {
   try {
     const container = docker.getContainer(req.params.id);
@@ -57,14 +56,13 @@ app.get('/api/containers/:id/logs', async (req, res) => {
       timestamps: false
     });
 
-    // Clean up Docker stream header bytes if returned as a raw buffer
     const logsText = typeof logsBuffer === 'string' 
       ? logsBuffer 
       : logsBuffer.toString('utf-8').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 
-    res.json({ logs: logsText || 'No logs found for this container.' });
+    res.json({ logs: logsText || 'No logs recorded.' });
   } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch logs', details: err.message });
+    res.status(500).json({ error: 'Failed to fetch container logs', details: err.message });
   }
 });
 
@@ -85,11 +83,11 @@ app.post('/api/settings', (req, res) => {
 app.post('/api/settings/test-notification', async (req, res) => {
   try {
     await notifier.send({
-      title: 'Test Notification 🤓',
-      message: 'If you are reading this, your notification settings are working!',
+      title: 'Test Notification',
+      message: 'Notification system configuration verified successfully.',
       type: 'info'
     });
-    res.json({ success: true, message: 'Test notification sent!' });
+    res.json({ success: true, message: 'Test notification sent.' });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to send test notification', details: err.message });
   }

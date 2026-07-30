@@ -29,7 +29,7 @@
 
     /* Header & Brand Logo */
     .brand-logo {
-      height: 63px;
+      height: 52px;
       width: auto;
       object-fit: contain;
     }
@@ -177,13 +177,13 @@
 </head>
 <body>
   <div class="container py-4">
-    <!-- Header Logo Only -->
+    <!-- Header Logo -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary-subtle">
       <div class="d-flex align-items-center">
         <img src="https://i.ibb.co/szk7dkn/imgnurd.webp" alt="imgnurd" class="brand-logo">
       </div>
       <button id="checkNowBtn" onclick="runCheckNow()" class="btn btn-nurdy">
-        ⚡ Check Now
+        Check Now
       </button>
     </div>
 
@@ -257,7 +257,7 @@
             </div>
 
             <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary-subtle">
-              <button type="button" onclick="testNotification()" class="btn btn-nurdy-outline">🧪 Send Test</button>
+              <button type="button" onclick="testNotification()" class="btn btn-nurdy-outline">Test Notification</button>
               <button type="submit" class="btn btn-nurdy">Save Configuration</button>
             </div>
           </form>
@@ -301,8 +301,8 @@
           let actionBtn = `<button disabled class="btn btn-sm btn-outline-secondary opacity-25">Up to Date</button>`;
 
           if (c.updateAvailable) {
-            badgeHtml = `<span class="badge-status badge-update-available">⚡ Update Available</span>`;
-            actionBtn = `<button onclick="updateContainer('${c.id}', ${c.isSelf})" class="btn btn-sm btn-nurdy">${c.isSelf ? 'Update Self 🤓' : 'Update'}</button>`;
+            badgeHtml = `<span class="badge-status badge-update-available">Update Available</span>`;
+            actionBtn = `<button onclick="updateContainer('${c.id}', ${c.isSelf})" class="btn btn-sm btn-nurdy">${c.isSelf ? 'Update Self' : 'Update'}</button>`;
           }
 
           return `
@@ -311,14 +311,14 @@
                 <div>
                   <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                     <h5 class="h6 mb-0 text-truncate text-white font-weight-bold" title="${c.name}">
-                      ${c.name} ${c.isSelf ? '<span class="text-warning small">(imgnurd)</span>' : ''}
+                      ${c.name} ${c.isSelf ? '<span class="text-warning small">(System)</span>' : ''}
                     </h5>
                     ${badgeHtml}
                   </div>
                   <div class="code-tag text-truncate mb-3" title="${c.image}">${c.image}</div>
                 </div>
                 <div class="pt-3 border-top border-secondary-subtle d-flex justify-content-between align-items-center">
-                  <button onclick="viewLogs('${c.id}', '${c.name}')" class="btn btn-sm btn-nurdy-outline py-1 px-2" style="font-size: 0.75rem;">📜 Logs</button>
+                  <button onclick="viewLogs('${c.id}', '${c.name}')" class="btn btn-sm btn-nurdy-outline py-1 px-2" style="font-size: 0.75rem;">Logs</button>
                   <div class="d-flex align-items-center gap-2">
                     <span class="text-muted small" style="font-size: 0.75rem;">${c.lastChecked}</span>
                     ${actionBtn}
@@ -355,7 +355,7 @@
     async function runCheckNow() {
       const btn = document.getElementById('checkNowBtn');
       btn.disabled = true;
-      btn.innerHTML = '⏳ Checking...';
+      btn.innerHTML = 'Checking...';
 
       try {
         const res = await fetch('/api/containers/check-now', { method: 'POST' });
@@ -366,13 +366,13 @@
         alert('Failed to complete container update check.');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '⚡ Check Now';
+        btn.innerHTML = 'Check Now';
       }
     }
 
     async function updateContainer(id, isSelf = false) {
       const confirmMsg = isSelf 
-        ? 'Update imgnurd? The sidecar helper will pull the new image and restart the container in ~10 seconds.'
+        ? 'Update imgnurd? The sidecar helper will pull the new image and restart the container in approximately 10 seconds.'
         : 'Recreate this container with its latest image tag?';
 
       if (!confirm(confirmMsg)) return;
@@ -441,7 +441,7 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (data.success) alert('Configuration saved successfully!');
+        if (data.success) alert('Configuration saved successfully.');
       } catch (err) {
         alert('Failed to save settings.');
       }
