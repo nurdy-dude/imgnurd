@@ -93,11 +93,9 @@ export async function safeUpdateContainer(containerId: string): Promise<{ succes
     const rawName = inspectData.Name.replace(/^\//, '');
     const imageName = inspectData.Config.Image;
 
+    // Handle self-update via sidecar helper
     if (rawName.toLowerCase().includes('imgnurd') || imageName.toLowerCase().includes('imgnurd')) {
-      return {
-        success: false,
-        message: 'imgnurd cannot update itself directly. Please use Portainer or docker-compose.'
-      };
+      return await spawnSelfUpdater(containerId, rawName, imageName, inspectData);
     }
 
     console.log(`[imgnurd] Pulling fresh image for ${imageName}...`);
@@ -146,5 +144,52 @@ export async function safeUpdateContainer(containerId: string): Promise<{ succes
   } catch (err: any) {
     console.error(`[imgnurd] Update failed for container ${containerId}:`, err.message);
     return { success: false, message: `Failed to update: ${err.message}` };
+  }
+}
+
+async function spawnSelfUpdater(containerId: string, rawName: string, imageName: string, inspectData: any): Promise<{ success: boolean; message: string }> {
+  console.log(`[imgnurd] Spawning sidecar helper to update imgnurd (${rawName})...`);
+
+  const socketBinding = isWindows ? '//./pipe/docker_engine://./pipe/docker_engine' : '/var/run/docker.sock:/var/run/docker.sock';
+  
+  // Script executed inside the temporary helper container
+  const updateScript = `
+    echo "[imgnurd-updater] Waiting for main container to stop..."
+    sleep 3
+    echo "[imgnurd-updater] Pulling latest image: ${imageName}..."
+    docker pull ${imageName}
+    echo "[imgnurd-updater] Stopping old container..."
+    docker stop ${rawName} || true
+    echo "[imgnurd-updater] Removing old container..."
+    docker rm ${rawName} || true
+    echo "[imgnurd-updater] Starting new imgnurd container..."
+    docker run -d --name ${rawName} --restart=always -v /var/run/docker.sock:/var/run/docker.sock -p 3000:3000 ${imageName}
+    echo "[imgnurd-updater] Update complete! Cleaning up self..."
+  `;
+
+  try {
+    // Spawn temporary helper container
+    const helperContainer = await docker.createContainer({
+      Image: 'docker:cli',
+      name: 'imgnurd-updater-tmp',
+      Cmd: ['sh', '-c', updateScript],
+      HostConfig: {
+        Binds: [socketBinding],
+        AutoRemove: true
+      }
+    });
+
+    await helperContainer.start();
+
+    return {
+      success: true,
+      message: 'imgnurd self-update initiated! The dashboard will restart in ~10 seconds with the new version.'
+    };
+  } catch (err: any) {
+    console.error('[imgnurd] Failed to spawn self-updater helper:', err.message);
+    return {
+      success: false,
+      message: `Failed to start self-update helper: ${err.message}`
+    };
   }
 }

@@ -29,19 +29,9 @@
 
     /* Header & Brand Logo */
     .brand-logo {
-      height: 42px;
+      height: 63px;
       width: auto;
       object-fit: contain;
-    }
-
-    .brand-title {
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: #ffffff;
-    }
-
-    .brand-accent {
-      color: var(--nurdy-yellow);
     }
 
     /* Buttons */
@@ -113,8 +103,7 @@
     }
 
     .container-card.self-card {
-      opacity: 0.8;
-      border-style: dashed;
+      border: 1px solid var(--nurdy-yellow-glow);
     }
 
     .code-tag {
@@ -149,12 +138,6 @@
       border: 1px solid rgba(255, 214, 0, 0.3);
     }
 
-    .badge-self {
-      background: rgba(148, 163, 184, 0.1);
-      color: #94a3b8;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-    }
-
     /* Form Inputs */
     .form-control, .form-select {
       background-color: #090d16;
@@ -179,11 +162,10 @@
 </head>
 <body>
   <div class="container py-4">
-    <!-- Navbar Header -->
+    <!-- Header Logo Only -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary-subtle">
-      <div class="d-flex align-items-center gap-3">
-        <img src="https://i.ibb.co/szk7dkn/imgnurd.webp" alt="imgnurd logo" class="brand-logo">
-        <h1 class="h3 brand-title mb-0">img<span class="brand-accent">nurd</span></h1>
+      <div class="d-flex align-items-center">
+        <img src="https://i.ibb.co/szk7dkn/imgnurd.webp" alt="imgnurd" class="brand-logo">
       </div>
       <button id="checkNowBtn" onclick="runCheckNow()" class="btn btn-nurdy">
         ⚡ Check Now
@@ -286,12 +268,9 @@
           let badgeHtml = `<span class="badge-status badge-up-to-date">Up to Date</span>`;
           let actionBtn = `<button disabled class="btn btn-sm btn-outline-secondary opacity-25">Up to Date</button>`;
 
-          if (c.isSelf) {
-            badgeHtml = `<span class="badge-status badge-self">Self (Management)</span>`;
-            actionBtn = `<button disabled class="btn btn-sm btn-outline-secondary opacity-50" title="Manage via Portainer or Compose">Manual Update Only</button>`;
-          } else if (c.updateAvailable) {
+          if (c.updateAvailable) {
             badgeHtml = `<span class="badge-status badge-update-available">⚡ Update Available</span>`;
-            actionBtn = `<button onclick="updateContainer('${c.id}')" class="btn btn-sm btn-nurdy">Update</button>`;
+            actionBtn = `<button onclick="updateContainer('${c.id}', ${c.isSelf})" class="btn btn-sm btn-nurdy">${c.isSelf ? 'Update Self 🤓' : 'Update'}</button>`;
           }
 
           return `
@@ -299,7 +278,9 @@
               <div class="container-card h-100 p-3 d-flex flex-column justify-content-between ${c.isSelf ? 'self-card' : ''}">
                 <div>
                   <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                    <h5 class="h6 mb-0 text-truncate text-white font-weight-bold" title="${c.name}">${c.name}</h5>
+                    <h5 class="h6 mb-0 text-truncate text-white font-weight-bold" title="${c.name}">
+                      ${c.name} ${c.isSelf ? '<span class="text-warning small">(imgnurd)</span>' : ''}
+                    </h5>
                     ${badgeHtml}
                   </div>
                   <div class="code-tag text-truncate mb-3" title="${c.image}">${c.image}</div>
@@ -335,16 +316,41 @@
       }
     }
 
-    async function updateContainer(id) {
-      if (!confirm('Recreate this container with its latest image tag?')) return;
+    async function updateContainer(id, isSelf = false) {
+      const confirmMsg = isSelf 
+        ? 'Update imgnurd? The sidecar helper will pull the new image and restart the container in ~10 seconds.'
+        : 'Recreate this container with its latest image tag?';
+
+      if (!confirm(confirmMsg)) return;
+
       try {
         const res = await fetch(`/api/containers/${id}/update`, { method: 'POST' });
         const data = await res.json();
         alert(data.message);
-        loadContainers();
+
+        if (isSelf) {
+          // Poll for server recovery after self-update restart
+          setTimeout(pollServerStatus, 5000);
+        } else {
+          loadContainers();
+        }
       } catch (err) {
         alert('Failed to initiate container update.');
       }
+    }
+
+    function pollServerStatus() {
+      const checkInterval = setInterval(async () => {
+        try {
+          const res = await fetch('/api/containers');
+          if (res.ok) {
+            clearInterval(checkInterval);
+            window.location.reload();
+          }
+        } catch (e) {
+          // Server still restarting...
+        }
+      }, 2000);
     }
 
     async function loadSettings() {

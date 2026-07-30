@@ -10,11 +10,10 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Serve static frontend dashboard from public folder
 const publicPath = path.join(__dirname, '../public');
 app.use(express.static(publicPath));
 
-// --- REST API ENDPOINTS ---
+// REST API ENDPOINTS
 
 app.get('/api/containers', async (req, res) => {
   try {
