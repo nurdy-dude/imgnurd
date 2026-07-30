@@ -1,67 +1,68 @@
 import Docker from 'dockerode';
+import { notifier } from './notifier';
 
-const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+const isWindows = process.platform === 'win32';
 
-export interface ContainerInfo {
+export const docker = new Docker(
+  isWindows
+    ? { socketPath: '//./pipe/docker_engine' }
+    : { socketPath: '/var/run/docker.sock' }
+);
+
+export interface ContainerStatus {
   id: string;
   name: string;
   image: string;
   status: string;
-  state: string;
+  health: string;
   created: number;
 }
 
-export async function listContainers(): Promise<ContainerInfo[]> {
-  try {
-    const containers = await docker.listContainers({ all: true });
-    return containers.map((c) => ({
-      id: c.Id.substring(0, 12),
-      name: c.Names[0]?.replace(/^\//, '') || 'unnamed',
-      image: c.Image,
-      status: c.Status,
-      state: c.State,
-      created: c.Created,
-    }));
-  } catch (err: any) {
-    console.error('[imgnurd] Failed to list containers:', err.message);
-    throw err;
-  }
+export async function listContainers(): Promise<ContainerStatus[]> {
+  const containers = await docker.listContainers({ all: true });
+  
+  return containers.map(c => ({
+    id: c.Id.substring(0, 12),
+    name: c.Names[0] ? c.Names[0].replace(/^\//, '') : 'unnamed',
+    image: c.Image,
+    status: c.State,
+    health: c.Status.includes('(healthy)') ? 'healthy' : c.Status.includes('(unhealthy)') ? 'unhealthy' : 'n/a',
+    created: c.Created
+  }));
 }
 
-export async function pullAndRestartContainer(containerId: string): Promise<{ success: boolean; message: string }> {
+export async function safeUpdateContainer(containerId: string): Promise<{ success: boolean; message: string }> {
   try {
     const container = docker.getContainer(containerId);
     const inspectData = await container.inspect();
+    const rawName = inspectData.Name.replace(/^\//, '');
     const imageName = inspectData.Config.Image;
 
-    console.log(`[imgnurd] Pulling latest image for ${imageName}...`);
-
-    // Pull latest image with explicitly typed callback (Error | null)
+    console.log(`[imgnurd] Pulling fresh image for ${imageName}...`);
+    
     await new Promise<void>((resolve, reject) => {
       docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
         if (err) return reject(err);
-        docker.modem.followProgress(
-          stream,
-          (progressErr: Error | null, output: any[]) => {
-            if (progressErr) return reject(progressErr);
-            resolve();
-          }
-        );
+        docker.modem.followProgress(stream, (progressErr: Error | null) => {
+          if (progressErr) return reject(progressErr);
+          resolve();
+        });
       });
     });
 
-    console.log(`[imgnurd] Restarting container ${containerId}...`);
     await container.restart();
 
-    return {
-      success: true,
-      message: `Successfully updated and restarted container ${inspectData.Name.replace(/^\//, '')}`,
-    };
+    await notifier.send({
+      title: 'Container Updated',
+      message: `Container ${rawName} updated and restarted successfully.`,
+      type: 'success',
+      containerName: rawName,
+      imageName: imageName
+    });
+
+    return { success: true, message: `Successfully updated ${rawName}!` };
   } catch (err: any) {
-    console.error(`[imgnurd] Failed to update container ${containerId}:`, err.message);
-    return {
-      success: false,
-      message: err.message || 'Failed to update container',
-    };
+    console.error(`[imgnurd] Update failed for container ${containerId}:`, err.message);
+    return { success: false, message: `Failed to update: ${err.message}` };
   }
 }

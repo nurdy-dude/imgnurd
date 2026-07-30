@@ -1,7 +1,7 @@
 import cron, { ScheduledTask } from 'node-cron';
-import { listContainers } from './docker.js';
-import { notifier } from './notifier.js';
-import { getSettings } from './settings.js';
+import { listContainers } from './docker';
+import { notifier } from './notifier';
+import { getSettings } from './settings';
 
 let currentJob: ScheduledTask | null = null;
 
@@ -21,13 +21,13 @@ export function initScheduler() {
   console.log(`[imgnurd] Scheduler initialized with schedule: "${schedule}"`);
 
   currentJob = cron.schedule(schedule, async () => {
-    console.log('[imgnurd] Running scheduled container check...');
+    console.log('[imgnurd] Executing scheduled container scan...');
     try {
       const containers = await listContainers();
       
       await notifier.send({
         title: 'Routine Container Check',
-        message: `Checked ${containers.length} active containers for image updates.`,
+        message: `Checked ${containers.length} active containers for updates.`,
         type: 'info'
       });
     } catch (err: any) {
