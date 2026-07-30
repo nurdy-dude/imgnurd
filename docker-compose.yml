@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  imgnurd:
+    build: .
+    image: ghcr.io/yourusername/imgnurd:latest
+    container_name: imgnurd
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - imgnurd-data:/app/data
+
+volumes:
+  imgnurd-data:

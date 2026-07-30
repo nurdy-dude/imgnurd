@@ -1,0 +1,26 @@
+{
+  "name": "imgnurd",
+  "version": "0.1.0",
+  "description": "Lightweight container image update manager and dashboard.",
+  "main": "dist/backend/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/backend/server.js",
+    "dev": "ts-node src/backend/server.ts"
+  },
+  "dependencies": {
+    "dockerode": "^4.0.2",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.29",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/ws": "^8.5.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
