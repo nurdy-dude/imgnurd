@@ -26,7 +26,9 @@ const defaultSettings: AppSettings = {
 
 export function getSettings(): AppSettings {
   try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     if (!fs.existsSync(SETTINGS_FILE)) {
       fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
       return defaultSettings;
@@ -43,7 +45,9 @@ export function saveSettings(newSettings: Partial<AppSettings>): AppSettings {
   const current = getSettings();
   const updated = { ...current, ...newSettings };
   try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(updated, null, 2));
   } catch (err) {
     console.error('[imgnurd] Failed to save settings:', err);
