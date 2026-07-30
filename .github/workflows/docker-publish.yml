@@ -1,20 +1,23 @@
-name: Publish Docker Image
+name: Publish Docker Image & Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  build-and-push:
+  build-release-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -25,8 +28,26 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Build TypeScript
+      - name: Test TypeScript Build
         run: npm run build
+
+      - name: Generate Version Tag
+        id: versioning
+        run: |
+          # Calculate version tag based on commit count (e.g., v1.0.12)
+          BUILD_NUMBER=$(git rev-list --count HEAD)
+          TAG_NAME="v1.0.${BUILD_NUMBER}"
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+          echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -35,11 +56,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}
+            ghcr.io/${{ github.repository }}:${{ env.TAG_NAME }}
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
