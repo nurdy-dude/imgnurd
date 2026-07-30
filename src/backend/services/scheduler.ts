@@ -1,5 +1,5 @@
 import cron, { ScheduledTask } from 'node-cron';
-import { listContainers } from './docker';
+import { checkForUpdates } from './docker';
 import { notifier } from './notifier';
 import { getSettings } from './settings';
 
@@ -23,13 +23,15 @@ export function initScheduler() {
   currentJob = cron.schedule(schedule, async () => {
     console.log('[imgnurd] Executing scheduled container scan...');
     try {
-      const containers = await listContainers();
+      const result = await checkForUpdates();
       
-      await notifier.send({
-        title: 'Routine Container Check',
-        message: `Checked ${containers.length} active containers for updates.`,
-        type: 'info'
-      });
+      if (result.updatesFound > 0) {
+        await notifier.send({
+          title: 'Container Updates Available 🤓',
+          message: `Found ${result.updatesFound} container update(s) ready during scheduled check.`,
+          type: 'warning'
+        });
+      }
     } catch (err: any) {
       console.error('[imgnurd] Scheduled check error:', err.message);
     }

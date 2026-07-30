@@ -1,153 +1,192 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>imgnurd // Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>imgnurd Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #0f172a; color: #f8fafc; }
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .card { background-color: #1e293b; border: 1px solid #334155; color: #f8fafc; }
+    .nav-tabs .nav-link { color: #94a3b8; border: none; }
+    .nav-tabs .nav-link.active { background-color: #1e293b; color: #38bdf8; border-bottom: 2px solid #38bdf8; }
+    .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
+    .form-control:focus, .form-select:focus { background-color: #0f172a; color: #f8fafc; border-color: #38bdf8; box-shadow: none; }
   </style>
 </head>
-<body class="p-8">
-  <div class="max-w-6xl mx-auto">
-    <!-- Header -->
-    <header class="flex items-center justify-between pb-6 border-b border-slate-800 mb-8">
-      <div class="flex items-center gap-3">
-        <span class="text-3xl">🤓</span>
-        <h1 class="text-2xl font-bold tracking-tight text-indigo-400">imgnurd</h1>
-      </div>
-      <div class="flex gap-3">
-        <button onclick="toggleSettingsModal(true)" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition shadow">
-          ⚙️ Settings & Notifications
-        </button>
-        <button onclick="fetchContainers()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-sm font-medium rounded-lg border border-slate-700 transition">
-          Refresh List
-        </button>
-      </div>
-    </header>
-
-    <!-- Container Table -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-      <table class="w-full text-left text-sm">
-        <thead class="bg-slate-950/50 text-slate-400 uppercase text-xs border-b border-slate-800">
-          <tr>
-            <th class="p-4">Name</th>
-            <th class="p-4">Image</th>
-            <th class="p-4">Status</th>
-            <th class="p-4">Health</th>
-            <th class="p-4 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="container-table" class="divide-y divide-slate-800"></tbody>
-      </table>
+<body>
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 mb-0">🤓 imgnurd</h1>
+      <button id="checkNowBtn" onclick="runCheckNow()" class="btn btn-primary">
+        🔍 Check Now
+      </button>
     </div>
 
-    <!-- Live Logs Modal -->
-    <div id="log-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-40">
-      <div class="bg-slate-900 border border-slate-800 w-full max-w-4xl rounded-xl overflow-hidden flex flex-col h-[70vh]">
-        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
-          <h3 class="font-bold text-slate-200" id="log-title">Container Logs</h3>
-          <button onclick="closeLogs()" class="text-slate-400 hover:text-white">&times;</button>
+    <ul class="nav nav-tabs mb-4" id="mainTab" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" id="containers-tab" data-bs-toggle="tab" data-bs-target="#containers-panel" type="button">Containers</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-panel" type="button">Settings & Webhooks</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="mainTabContent">
+      <!-- Containers List Tab -->
+      <div class="tab-pane fade show active" id="containers-panel" role="tabpanel">
+        <div id="containerGrid" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+          <div class="col-12 text-center py-5">
+            <div class="spinner-border text-info" role="status"></div>
+            <p class="mt-2 text-muted">Loading containers...</p>
+          </div>
         </div>
-        <pre id="log-content" class="p-4 bg-black text-green-400 font-mono text-xs overflow-y-auto flex-1 whitespace-pre-wrap"></pre>
       </div>
-    </div>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50">
-      <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-xl overflow-hidden p-6 flex flex-col gap-4">
-        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-          <h3 class="text-lg font-bold text-indigo-400">Settings & Notifications</h3>
-          <button onclick="toggleSettingsModal(false)" class="text-slate-400 hover:text-white">&times;</button>
+      <!-- Settings Tab -->
+      <div class="tab-pane fade" id="settings-panel" role="tabpanel">
+        <div class="card p-4 max-w-lg">
+          <h4 class="mb-3">Schedule & Webhook Notifications</h4>
+          <form id="settingsForm" onsubmit="saveSettings(event)">
+            <div class="mb-3">
+              <label class="form-label">Cron Schedule (Standard Cron Syntax)</label>
+              <input type="text" id="cronSchedule" class="form-control" placeholder="0 */6 * * *">
+              <div class="form-text text-muted">Default is <code>0 */6 * * *</code> (every 6 hours).</div>
+            </div>
+
+            <hr class="my-4 border-secondary">
+            <h5 class="mb-3">Webhooks</h5>
+
+            <div class="mb-3">
+              <label class="form-label">Discord Webhook URL</label>
+              <input type="url" id="discordWebhook" class="form-control" placeholder="https://discord.com/api/webhooks/...">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Slack Webhook URL</label>
+              <input type="url" id="slackWebhook" class="form-control" placeholder="https://hooks.slack.com/services/...">
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Gotify Server URL</label>
+                <input type="url" id="gotifyUrl" class="form-control" placeholder="https://gotify.example.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Gotify Token</label>
+                <input type="text" id="gotifyToken" class="form-control">
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Telegram Bot Token</label>
+                <input type="text" id="telegramToken" class="form-control">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Telegram Chat ID</label>
+                <input type="text" id="telegramChatId" class="form-control">
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+              <button type="button" onclick="testNotification()" class="btn btn-outline-info">🧪 Send Test Notification</button>
+              <button type="submit" class="btn btn-success">Save Settings</button>
+            </div>
+          </form>
         </div>
-
-        <form id="settings-form" onsubmit="saveSettings(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Check Schedule (Cron Expression)</label>
-            <input type="text" id="cronSchedule" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200 font-mono" placeholder="0 */6 * * *">
-          </div>
-
-          <hr class="border-slate-800 my-2">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Webhooks & Platforms</h4>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Discord Webhook URL</label>
-            <input type="url" id="discordWebhook" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200" placeholder="https://discord.com/api/webhooks/...">
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Slack Webhook URL</label>
-            <input type="url" id="slackWebhook" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200" placeholder="https://hooks.slack.com/services/...">
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Gotify Base URL</label>
-              <input type="url" id="gotifyUrl" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200" placeholder="https://gotify.local">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Gotify App Token</label>
-              <input type="text" id="gotifyToken" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Telegram Bot Token</label>
-              <input type="text" id="telegramToken" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Telegram Chat ID</label>
-              <input type="text" id="telegramChatId" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200">
-            </div>
-          </div>
-
-          <div class="flex justify-between items-center pt-4 border-t border-slate-800">
-            <button type="button" onclick="testNotification()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs">
-              🧪 Test Alert
-            </button>
-            <div class="flex gap-2">
-              <button type="button" onclick="toggleSettingsModal(false)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded">Cancel</button>
-              <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded">Save Settings</button>
-            </div>
-          </div>
-        </form>
       </div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let logWs = null;
+    async function loadContainers() {
+      try {
+        const res = await fetch('/api/containers');
+        const containers = await res.json();
+        const grid = document.getElementById('containerGrid');
 
-    async function fetchContainers() {
-      const res = await fetch('/api/containers');
-      const data = await res.json();
-      const tbody = document.getElementById('container-table');
-      tbody.innerHTML = data.map(c => `
-        <tr class="hover:bg-slate-800/50 transition">
-          <td class="p-4 font-semibold text-white">${c.name}</td>
-          <td class="p-4 font-mono text-slate-400 text-xs">${c.image}</td>
-          <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs ${c.status === 'running' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400'}">${c.status}</span></td>
-          <td class="p-4"><span class="text-xs text-slate-400">${c.health}</span></td>
-          <td class="p-4 text-right space-x-2">
-            <button onclick="viewLogs('${c.id}', '${c.name}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs">Logs</button>
-            <button onclick="updateContainer('${c.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-semibold">Update</button>
-          </td>
-        </tr>
-      `).join('');
+        if (containers.length === 0) {
+          grid.innerHTML = `<div class="col-12"><div class="alert alert-info">No running containers detected.</div></div>`;
+          return;
+        }
+
+        grid.innerHTML = containers.map(c => {
+          const badgeHtml = c.updateAvailable
+            ? `<span class="badge bg-warning text-dark">⚠️ Update Available</span>`
+            : `<span class="badge bg-success">✅ Up to Date</span>`;
+
+          return `
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-body d-flex flex-column justify-content-between">
+                  <div>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <h5 class="card-title h6 mb-0 text-truncate" title="${c.name}">${c.name}</h5>
+                      ${badgeHtml}
+                    </div>
+                    <p class="card-text text-muted small text-break mb-2">${c.image}</p>
+                  </div>
+                  <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                    <small class="text-secondary" style="font-size: 0.75rem;">Checked: ${c.lastChecked}</small>
+                    ${c.updateAvailable 
+                      ? `<button onclick="updateContainer('${c.id}')" class="btn btn-sm btn-outline-warning">Update</button>` 
+                      : `<button disabled class="btn btn-sm btn-outline-secondary opacity-50">Current</button>`}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to fetch containers:', err);
+      }
     }
 
-    async function toggleSettingsModal(show) {
-      const modal = document.getElementById('settings-modal');
-      if (show) {
-        modal.classList.remove('hidden');
+    async function runCheckNow() {
+      const btn = document.getElementById('checkNowBtn');
+      btn.disabled = true;
+      btn.innerText = '⏳ Checking...';
+
+      try {
+        const res = await fetch('/api/containers/check-now', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        await loadContainers();
+      } catch (err) {
+        alert('Error running update check.');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🔍 Check Now';
+      }
+    }
+
+    async function updateContainer(id) {
+      if (!confirm('Are you sure you want to pull the latest image and restart this container?')) return;
+      try {
+        const res = await fetch(`/api/containers/${id}/update`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        loadContainers();
+      } catch (err) {
+        alert('Failed to trigger update.');
+      }
+    }
+
+    async function loadSettings() {
+      try {
         const res = await fetch('/api/settings');
         const cfg = await res.json();
-        for (const key in cfg) {
-          if (document.getElementById(key)) document.getElementById(key).value = cfg[key];
-        }
-      } else {
-        modal.classList.add('hidden');
+        document.getElementById('cronSchedule').value = cfg.cronSchedule || '0 */6 * * *';
+        document.getElementById('discordWebhook').value = cfg.discordWebhook || '';
+        document.getElementById('slackWebhook').value = cfg.slackWebhook || '';
+        document.getElementById('gotifyUrl').value = cfg.gotifyUrl || '';
+        document.getElementById('gotifyToken').value = cfg.gotifyToken || '';
+        document.getElementById('telegramToken').value = cfg.telegramToken || '';
+        document.getElementById('telegramChatId').value = cfg.telegramChatId || '';
+      } catch (err) {
+        console.error('Failed to load settings:', err);
       }
     }
 
@@ -160,54 +199,36 @@
         gotifyUrl: document.getElementById('gotifyUrl').value,
         gotifyToken: document.getElementById('gotifyToken').value,
         telegramToken: document.getElementById('telegramToken').value,
-        telegramChatId: document.getElementById('telegramChatId').value
+        telegramChatId: document.getElementById('telegramChatId').value,
       };
 
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      alert('Settings saved successfully!');
-      toggleSettingsModal(false);
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) alert('Settings saved successfully!');
+      } catch (err) {
+        alert('Failed to save settings.');
+      }
     }
 
     async function testNotification() {
-      const res = await fetch('/api/settings/test-notification', { method: 'POST' });
-      const data = await res.json();
-      alert(data.message || data.error);
+      try {
+        const res = await fetch('/api/settings/test-notification', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || data.error);
+      } catch (err) {
+        alert('Failed to send test notification.');
+      }
     }
 
-    async function updateContainer(id) {
-      if(!confirm("Are you sure you want to pull the latest image and update this container?")) return;
-      const res = await fetch(`/api/containers/${id}/update`, { method: 'POST' });
-      const data = await res.json();
-      alert(data.message);
-      fetchContainers();
-    }
-
-    function viewLogs(id, name) {
-      document.getElementById('log-title').innerText = `Logs: ${name}`;
-      document.getElementById('log-content').innerText = 'Connecting...';
-      document.getElementById('log-modal').classList.remove('hidden');
-
-      if (logWs) logWs.close();
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      logWs = new WebSocket(`${protocol}//${window.location.host}?containerId=${id}`);
-      
-      logWs.onmessage = (event) => {
-        const logContent = document.getElementById('log-content');
-        logContent.innerText += event.data;
-        logContent.scrollTop = logContent.scrollHeight;
-      };
-    }
-
-    function closeLogs() {
-      if (logWs) logWs.close();
-      document.getElementById('log-modal').classList.add('hidden');
-    }
-
-    fetchContainers();
+    document.addEventListener('DOMContentLoaded', () => {
+      loadContainers();
+      loadSettings();
+    });
   </script>
 </body>
 </html>

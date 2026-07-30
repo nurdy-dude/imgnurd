@@ -1,6 +1,6 @@
 import express from 'express';
 import path from 'path';
-import { listContainers, safeUpdateContainer } from './services/docker';
+import { listContainers, safeUpdateContainer, checkForUpdates } from './services/docker';
 import { getSettings, saveSettings } from './services/settings';
 import { notifier } from './services/notifier';
 import { initScheduler } from './services/scheduler';
@@ -22,6 +22,19 @@ app.get('/api/containers', async (req, res) => {
     res.json(containers);
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to retrieve containers', details: err.message });
+  }
+});
+
+app.post('/api/containers/check-now', async (req, res) => {
+  try {
+    const result = await checkForUpdates();
+    res.json({
+      success: true,
+      message: `Check complete! ${result.updatesFound} update(s) found across ${result.total} containers.`,
+      result
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to run image check', details: err.message });
   }
 });
 
