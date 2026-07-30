@@ -16,7 +16,7 @@ version: '3.8'
 
 services:
   imgnurd:
-    image: ghcr.io/yourusername/imgnurd:latest
+    image: ghcr.io/nurdy-dude/imgnurd:latest
     container_name: imgnurd
     restart: unless-stopped
     ports:
