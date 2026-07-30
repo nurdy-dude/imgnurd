@@ -3,26 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>imgnurd Dashboard</title>
+  <title>imgnurd | Container Update Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
   <style>
-    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-    .card { background-color: #1e293b; border: 1px solid #334155; color: #f8fafc; }
-    .nav-tabs .nav-link { color: #94a3b8; border: none; }
-    .nav-tabs .nav-link.active { background-color: #1e293b; color: #38bdf8; border-bottom: 2px solid #38bdf8; }
-    .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
-    .form-control:focus, .form-select:focus { background-color: #0f172a; color: #f8fafc; border-color: #38bdf8; box-shadow: none; }
+    :root {
+      --nurdy-yellow: #FFD600;
+      --nurdy-yellow-hover: #E6C200;
+      --nurdy-yellow-glow: rgba(255, 214, 0, 0.15);
+      --bg-dark: #0b0f17;
+      --card-bg: #131b2e;
+      --card-border: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* Header Styling */
+    .brand-title {
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+    }
+
+    .brand-accent {
+      color: var(--nurdy-yellow);
+    }
+
+    /* Buttons */
+    .btn-nurdy {
+      background-color: var(--nurdy-yellow);
+      color: #000000;
+      font-weight: 700;
+      border: none;
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 4px 14px var(--nurdy-yellow-glow);
+    }
+
+    .btn-nurdy:hover:not(:disabled) {
+      background-color: var(--nurdy-yellow-hover);
+      color: #000000;
+      transform: translateY(-1px);
+    }
+
+    .btn-nurdy-outline {
+      background: transparent;
+      border: 1px solid var(--nurdy-yellow);
+      color: var(--nurdy-yellow);
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nurdy-outline:hover:not(:disabled) {
+      background-color: var(--nurdy-yellow);
+      color: #000000;
+    }
+
+    /* Tabs Navigation */
+    .nav-tabs {
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .nav-tabs .nav-link {
+      color: var(--text-muted);
+      border: none;
+      font-weight: 600;
+      padding: 0.75rem 1.25rem;
+      transition: color 0.2s ease;
+    }
+
+    .nav-tabs .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-tabs .nav-link.active {
+      background-color: transparent;
+      color: var(--nurdy-yellow);
+      border-bottom: 2px solid var(--nurdy-yellow);
+    }
+
+    /* Cards */
+    .container-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .container-card:hover {
+      border-color: #334155;
+      transform: translateY(-2px);
+    }
+
+    .container-card.self-card {
+      opacity: 0.8;
+      border-dash: 1px dashed var(--card-border);
+    }
+
+    .code-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: #090d16;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      color: #94a3b8;
+      border: 1px solid #1e293b;
+    }
+
+    /* Badges */
+    .badge-status {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-up-to-date {
+      background: rgba(34, 197, 94, 0.1);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .badge-update-available {
+      background: rgba(255, 214, 0, 0.15);
+      color: var(--nurdy-yellow);
+      border: 1px solid rgba(255, 214, 0, 0.3);
+    }
+
+    .badge-self {
+      background: rgba(148, 163, 184, 0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    /* Form Inputs */
+    .form-control, .form-select {
+      background-color: #090d16;
+      border-color: var(--card-border);
+      color: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background-color: #090d16;
+      color: #f8fafc;
+      border-color: var(--nurdy-yellow);
+      box-shadow: 0 0 0 2px var(--nurdy-yellow-glow);
+    }
+
+    .form-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #cbd5e1;
+    }
   </style>
 </head>
 <body>
   <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1 class="h3 mb-0">🤓 imgnurd</h1>
-      <button id="checkNowBtn" onclick="runCheckNow()" class="btn btn-primary">
-        🔍 Check Now
+    <!-- Navbar Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary-subtle">
+      <div class="d-flex align-items-center gap-2">
+        <span style="font-size: 1.8rem;">🤓</span>
+        <h1 class="h3 brand-title mb-0">img<span class="brand-accent">nurd</span></h1>
+      </div>
+      <button id="checkNowBtn" onclick="runCheckNow()" class="btn btn-nurdy">
+        ⚡ Check Now
       </button>
     </div>
 
+    <!-- Main Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="mainTab" role="tablist">
       <li class="nav-item">
         <button class="nav-link active" id="containers-tab" data-bs-toggle="tab" data-bs-target="#containers-panel" type="button">Containers</button>
@@ -37,48 +199,50 @@
       <div class="tab-pane fade show active" id="containers-panel" role="tabpanel">
         <div id="containerGrid" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
           <div class="col-12 text-center py-5">
-            <div class="spinner-border text-info" role="status"></div>
-            <p class="mt-2 text-muted">Loading containers...</p>
+            <div class="spinner-border" style="color: var(--nurdy-yellow);" role="status"></div>
+            <p class="mt-3 text-muted">Scanning active Docker containers...</p>
           </div>
         </div>
       </div>
 
       <!-- Settings Tab -->
       <div class="tab-pane fade" id="settings-panel" role="tabpanel">
-        <div class="card p-4 max-w-lg">
-          <h4 class="mb-3">Schedule & Webhook Notifications</h4>
+        <div class="container-card p-4 mx-auto" style="max-width: 720px;">
+          <h4 class="mb-1 font-weight-bold" style="color: #ffffff;">Schedule & Notifications</h4>
+          <p class="text-muted small mb-4">Configure background container update checks and webhook integrations.</p>
+          
           <form id="settingsForm" onsubmit="saveSettings(event)">
-            <div class="mb-3">
-              <label class="form-label">Cron Schedule (Standard Cron Syntax)</label>
-              <input type="text" id="cronSchedule" class="form-control" placeholder="0 */6 * * *">
-              <div class="form-text text-muted">Default is <code>0 */6 * * *</code> (every 6 hours).</div>
+            <div class="mb-4">
+              <label class="form-label">CRON Schedule Expression</label>
+              <input type="text" id="cronSchedule" class="form-control code-tag text-white" placeholder="0 */6 * * *">
+              <div class="form-text text-muted">Default check frequency is <code>0 */6 * * *</code> (Runs every 6 hours).</div>
             </div>
 
-            <hr class="my-4 border-secondary">
-            <h5 class="mb-3">Webhooks</h5>
+            <hr class="my-4" style="border-color: var(--card-border);">
+            <h5 class="mb-3 text-white">Webhook Endpoints</h5>
 
             <div class="mb-3">
-              <label class="form-label">Discord Webhook URL</label>
+              <label class="form-label">Discord Webhook</label>
               <input type="url" id="discordWebhook" class="form-control" placeholder="https://discord.com/api/webhooks/...">
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Slack Webhook URL</label>
+              <label class="form-label">Slack Webhook</label>
               <input type="url" id="slackWebhook" class="form-control" placeholder="https://hooks.slack.com/services/...">
             </div>
 
-            <div class="row g-2 mb-3">
+            <div class="row g-3 mb-3">
               <div class="col-md-6">
-                <label class="form-label">Gotify Server URL</label>
+                <label class="form-label">Gotify URL</label>
                 <input type="url" id="gotifyUrl" class="form-control" placeholder="https://gotify.example.com">
               </div>
               <div class="col-md-6">
-                <label class="form-label">Gotify Token</label>
+                <label class="form-label">Gotify App Token</label>
                 <input type="text" id="gotifyToken" class="form-control">
               </div>
             </div>
 
-            <div class="row g-2 mb-3">
+            <div class="row g-3 mb-4">
               <div class="col-md-6">
                 <label class="form-label">Telegram Bot Token</label>
                 <input type="text" id="telegramToken" class="form-control">
@@ -89,9 +253,9 @@
               </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-4">
-              <button type="button" onclick="testNotification()" class="btn btn-outline-info">🧪 Send Test Notification</button>
-              <button type="submit" class="btn btn-success">Save Settings</button>
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary-subtle">
+              <button type="button" onclick="testNotification()" class="btn btn-nurdy-outline">🧪 Send Test</button>
+              <button type="submit" class="btn btn-nurdy">Save Configuration</button>
             </div>
           </form>
         </div>
@@ -108,46 +272,49 @@
         const grid = document.getElementById('containerGrid');
 
         if (containers.length === 0) {
-          grid.innerHTML = `<div class="col-12"><div class="alert alert-info">No running containers detected.</div></div>`;
+          grid.innerHTML = `<div class="col-12"><div class="container-card p-4 text-center text-muted">No active Docker containers found on socket.</div></div>`;
           return;
         }
 
         grid.innerHTML = containers.map(c => {
-          const badgeHtml = c.updateAvailable
-            ? `<span class="badge bg-warning text-dark">⚠️ Update Available</span>`
-            : `<span class="badge bg-success">✅ Up to Date</span>`;
+          let badgeHtml = `<span class="badge-status badge-up-to-date">Up to Date</span>`;
+          let actionBtn = `<button disabled class="btn btn-sm btn-outline-secondary opacity-25">Up to Date</button>`;
+
+          if (c.isSelf) {
+            badgeHtml = `<span class="badge-status badge-self">Self (Management)</span>`;
+            actionBtn = `<button disabled class="btn btn-sm btn-outline-secondary opacity-50" title="Manage via Portainer or Compose">Manual Update Only</button>`;
+          } else if (c.updateAvailable) {
+            badgeHtml = `<span class="badge-status badge-update-available">⚡ Update Available</span>`;
+            actionBtn = `<button onclick="updateContainer('${c.id}')" class="btn btn-sm btn-nurdy">Update</button>`;
+          }
 
           return `
             <div class="col">
-              <div class="card h-100">
-                <div class="card-body d-flex flex-column justify-content-between">
-                  <div>
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <h5 class="card-title h6 mb-0 text-truncate" title="${c.name}">${c.name}</h5>
-                      ${badgeHtml}
-                    </div>
-                    <p class="card-text text-muted small text-break mb-2">${c.image}</p>
+              <div class="container-card h-100 p-3 d-flex flex-column justify-content-between ${c.isSelf ? 'self-card' : ''}">
+                <div>
+                  <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <h5 class="h6 mb-0 text-truncate text-white font-weight-bold" title="${c.name}">${c.name}</h5>
+                    ${badgeHtml}
                   </div>
-                  <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
-                    <small class="text-secondary" style="font-size: 0.75rem;">Checked: ${c.lastChecked}</small>
-                    ${c.updateAvailable 
-                      ? `<button onclick="updateContainer('${c.id}')" class="btn btn-sm btn-outline-warning">Update</button>` 
-                      : `<button disabled class="btn btn-sm btn-outline-secondary opacity-50">Current</button>`}
-                  </div>
+                  <div class="code-tag text-truncate mb-3" title="${c.image}">${c.image}</div>
+                </div>
+                <div class="pt-3 border-top border-secondary-subtle d-flex justify-content-between align-items-center">
+                  <span class="text-muted small" style="font-size: 0.75rem;">Checked: ${c.lastChecked}</span>
+                  ${actionBtn}
                 </div>
               </div>
             </div>
           `;
         }).join('');
       } catch (err) {
-        console.error('Failed to fetch containers:', err);
+        console.error('Failed to load containers:', err);
       }
     }
 
     async function runCheckNow() {
       const btn = document.getElementById('checkNowBtn');
       btn.disabled = true;
-      btn.innerText = '⏳ Checking...';
+      btn.innerHTML = '⏳ Checking...';
 
       try {
         const res = await fetch('/api/containers/check-now', { method: 'POST' });
@@ -155,22 +322,22 @@
         alert(data.message);
         await loadContainers();
       } catch (err) {
-        alert('Error running update check.');
+        alert('Failed to complete container update check.');
       } finally {
         btn.disabled = false;
-        btn.innerText = '🔍 Check Now';
+        btn.innerHTML = '⚡ Check Now';
       }
     }
 
     async function updateContainer(id) {
-      if (!confirm('Are you sure you want to pull the latest image and restart this container?')) return;
+      if (!confirm('Recreate this container with its latest image tag?')) return;
       try {
         const res = await fetch(`/api/containers/${id}/update`, { method: 'POST' });
         const data = await res.json();
         alert(data.message);
         loadContainers();
       } catch (err) {
-        alert('Failed to trigger update.');
+        alert('Failed to initiate container update.');
       }
     }
 
@@ -209,7 +376,7 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (data.success) alert('Settings saved successfully!');
+        if (data.success) alert('Configuration saved successfully!');
       } catch (err) {
         alert('Failed to save settings.');
       }
