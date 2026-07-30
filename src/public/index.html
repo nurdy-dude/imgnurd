@@ -138,6 +138,21 @@
       border: 1px solid rgba(255, 214, 0, 0.3);
     }
 
+    /* Terminal Logs Output */
+    .logs-console {
+      background-color: #05080e;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      padding: 1rem;
+      border-radius: 8px;
+      max-height: 450px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border: 1px solid var(--card-border);
+    }
+
     /* Form Inputs */
     .form-control, .form-select {
       background-color: #090d16;
@@ -251,8 +266,25 @@
     </div>
   </div>
 
+  <!-- Logs Modal -->
+  <div class="modal fade" id="logsModal" tabindex="-1" aria-labelledby="logsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background-color: var(--card-bg); border: 1px solid var(--card-border); color: #fff;">
+        <div class="modal-header border-secondary-subtle">
+          <h5 class="modal-title font-weight-bold" id="logsModalLabel">Container Logs</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <pre id="logsContainer" class="logs-console">Fetching logs...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    let logsModalInstance = null;
+
     async function loadContainers() {
       try {
         const res = await fetch('/api/containers');
@@ -286,8 +318,11 @@
                   <div class="code-tag text-truncate mb-3" title="${c.image}">${c.image}</div>
                 </div>
                 <div class="pt-3 border-top border-secondary-subtle d-flex justify-content-between align-items-center">
-                  <span class="text-muted small" style="font-size: 0.75rem;">Checked: ${c.lastChecked}</span>
-                  ${actionBtn}
+                  <button onclick="viewLogs('${c.id}', '${c.name}')" class="btn btn-sm btn-nurdy-outline py-1 px-2" style="font-size: 0.75rem;">📜 Logs</button>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small" style="font-size: 0.75rem;">${c.lastChecked}</span>
+                    ${actionBtn}
+                  </div>
                 </div>
               </div>
             </div>
@@ -295,6 +330,25 @@
         }).join('');
       } catch (err) {
         console.error('Failed to load containers:', err);
+      }
+    }
+
+    async function viewLogs(id, name) {
+      if (!logsModalInstance) {
+        logsModalInstance = new bootstrap.Modal(document.getElementById('logsModal'));
+      }
+      
+      document.getElementById('logsModalLabel').innerText = `Logs: ${name}`;
+      const consoleElem = document.getElementById('logsContainer');
+      consoleElem.innerText = 'Loading container stdout/stderr...';
+      logsModalInstance.show();
+
+      try {
+        const res = await fetch(`/api/containers/${id}/logs`);
+        const data = await res.json();
+        consoleElem.innerText = data.logs || 'No output recorded.';
+      } catch (err) {
+        consoleElem.innerText = 'Error loading logs from Docker engine.';
       }
     }
 
@@ -329,7 +383,6 @@
         alert(data.message);
 
         if (isSelf) {
-          // Poll for server recovery after self-update restart
           setTimeout(pollServerStatus, 5000);
         } else {
           loadContainers();
@@ -348,7 +401,7 @@
             window.location.reload();
           }
         } catch (e) {
-          // Server still restarting...
+          // Server restarting...
         }
       }, 2000);
     }

@@ -1,6 +1,6 @@
 import express from 'express';
 import path from 'path';
-import { listContainers, safeUpdateContainer, checkForUpdates } from './services/docker';
+import { listContainers, safeUpdateContainer, checkForUpdates, docker } from './services/docker';
 import { getSettings, saveSettings } from './services/settings';
 import { notifier } from './services/notifier';
 import { initScheduler } from './services/scheduler';
@@ -43,6 +43,28 @@ app.post('/api/containers/:id/update', async (req, res) => {
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Logs Endpoint
+app.get('/api/containers/:id/logs', async (req, res) => {
+  try {
+    const container = docker.getContainer(req.params.id);
+    const logsBuffer = await container.logs({
+      stdout: true,
+      stderr: true,
+      tail: 100,
+      timestamps: false
+    });
+
+    // Clean up Docker stream header bytes if returned as a raw buffer
+    const logsText = typeof logsBuffer === 'string' 
+      ? logsBuffer 
+      : logsBuffer.toString('utf-8').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
+    res.json({ logs: logsText || 'No logs found for this container.' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch logs', details: err.message });
   }
 });
 
