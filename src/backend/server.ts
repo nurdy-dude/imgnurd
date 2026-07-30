@@ -4,13 +4,9 @@ import { WebSocketServer } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Internal Services
-import { initScheduler } from './services/scheduler.js';
 import { docker, listContainers, safeUpdateContainer } from './services/docker.js';
-import { getSettings, saveSettings } from './services/settings.js';
-import { notifier } from './services/notifier.js';
+import { initScheduler } from './services/scheduler.js';
 
-// Recreate __dirname for ESM context
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -19,13 +15,12 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 app.use(express.json());
-// Serves static files from the public folder
-app.use(express.static(path.join(__dirname, '../public')));
 
-/* ==========================================================================
-   Container REST APIs
-   ========================================================================== */
+// Serve static frontend files from 'public' directory
+const publicPath = path.join(__dirname, '../public');
+app.use(express.static(publicPath));
 
+// API Routes
 app.get('/api/containers', async (req, res) => {
   try {
     const containers = await listContainers();
@@ -44,51 +39,13 @@ app.post('/api/containers/:id/update', async (req, res) => {
   }
 });
 
-/* ==========================================================================
-   Settings & Notifications REST APIs
-   ========================================================================== */
-
-app.get('/api/settings', (req, res) => {
-  try {
-    const settings = getSettings();
-    res.json(settings);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/settings', (req, res) => {
-  try {
-    const updated = saveSettings(req.body);
-    res.json({ success: true, settings: updated });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/settings/test-notification', async (req, res) => {
-  try {
-    await notifier.send({
-      title: 'Test Notification',
-      message: 'If you are seeing this, imgnurd alerts are configured correctly! 🤓',
-      type: 'info'
-    });
-    res.json({ success: true, message: 'Test notification dispatched successfully!' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/* ==========================================================================
-   Real-Time Logs (WebSocket Engine)
-   ========================================================================== */
-
+// WebSocket Stream for Live Logs
 wss.on('connection', (ws, req) => {
   const urlParams = new URLSearchParams(req.url?.split('?')[1]);
   const containerId = urlParams.get('containerId');
 
   if (!containerId) {
-    ws.close(1008, 'containerId parameter required');
+    ws.close(1008, 'containerId required');
     return;
   }
 
@@ -100,28 +57,26 @@ wss.on('connection', (ws, req) => {
     tail: 100
   }, (err, stream) => {
     if (err || !stream) {
-      ws.send('Error attaching to container log stream.');
+      ws.send('Error accessing logs from Docker daemon.');
       return;
     }
 
-    stream.on('data', chunk => {
-      ws.send(chunk.toString('utf-8'));
-    });
+    if ('on' in stream) {
+      stream.on('data', (chunk: Buffer) => {
+        ws.send(chunk.toString('utf-8'));
+      });
+    }
 
     ws.on('close', () => {
-      // Stream auto-destroys on socket disconnect
+      // Socket automatically stops streaming on disconnect
     });
   });
 });
 
-/* ==========================================================================
-   Start Server & Cron Scheduler
-   ========================================================================== */
-
-const PORT = process.env.PORT || 3000;
-
+// Start Cron Scheduler
 initScheduler();
 
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🤓 imgnurd is running at http://localhost:${PORT}`);
 });
