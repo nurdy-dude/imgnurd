@@ -3,7 +3,7 @@ name: Publish Docker Image
 on:
   release:
     types: [published]
-  workflow_dispatch: # Allows manual trigger from Actions tab for quick testing!
+  workflow_dispatch:
 
 jobs:
   build-and-push:
