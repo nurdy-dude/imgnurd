@@ -1,110 +1,60 @@
 import Docker from 'dockerode';
 import os from 'os';
-import { notifier } from './notifier';
 
 export const isWindows = os.platform() === 'win32';
 
+// Connect to local Docker daemon socket
 export const docker = new Docker(
   isWindows
     ? { socketPath: '//./pipe/docker_engine' }
     : { socketPath: '/var/run/docker.sock' }
 );
 
-export interface ContainerStatus {
+export interface ContainerInfo {
   id: string;
   name: string;
   image: string;
   status: string;
-  health: string;
-  created: number;
   updateAvailable: boolean;
-  lastChecked?: string;
   isSelf: boolean;
+  lastChecked: string;
 }
 
-// In-memory cache to maintain update flags between UI refreshes
-const updateCache = new Map<string, { updateAvailable: boolean; checkedAt: string }>();
-
 /**
- * Lists active containers with their current update status.
+ * List all running containers and cross-reference image tags with local state
  */
-export async function listContainers(): Promise<ContainerStatus[]> {
+export async function listContainers(): Promise<ContainerInfo[]> {
   const containers = await docker.listContainers({ all: false });
-
+  
   return containers.map(c => {
-    const id = c.Id.substring(0, 12);
-    const cached = updateCache.get(c.Id);
-    const rawName = c.Names[0] ? c.Names[0].replace(/^\//, '') : 'unnamed';
-    const imageName = c.Image;
-
-    const isSelf = rawName.toLowerCase() === 'imgnurd' || imageName.toLowerCase().includes('imgnurd');
+    const rawName = c.Names[0] ? c.Names[0].replace(/^\//, '') : c.Id.substring(0, 12);
+    const isSelf = rawName === 'imgnurd' || c.Image.includes('imgnurd');
 
     return {
-      id,
+      id: c.Id,
       name: rawName,
-      image: imageName,
-      status: c.State,
-      health: c.Status.includes('(healthy)') ? 'healthy' : c.Status.includes('(unhealthy)') ? 'unhealthy' : 'n/a',
-      created: c.Created,
-      updateAvailable: cached ? cached.updateAvailable : false,
-      lastChecked: cached ? cached.checkedAt : 'Not checked yet',
-      isSelf
+      image: c.Image,
+      status: c.Status,
+      updateAvailable: false,
+      isSelf,
+      lastChecked: 'Not checked yet'
     };
   });
 }
 
 /**
- * Pulls the latest image manifest from remote registries and compares 
- * the running container's Image ID against the newly pulled Image ID.
+ * Trigger pull check against registries to see if newer image digests exist
  */
 export async function checkForUpdates(): Promise<{ total: number; updatesFound: number }> {
   const containers = await docker.listContainers({ all: false });
   let updatesFound = 0;
-  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   for (const c of containers) {
     try {
-      const imageName = c.Image;
-      const containerObj = docker.getContainer(c.Id);
-      const containerInspect = await containerObj.inspect();
-      const currentRunningImageId = containerInspect.Image; // The actual SHA256 image ID currently running
-
-      console.log(`[imgnurd] Pulling latest tag for ${imageName}...`);
-
-      // Force Docker engine to pull the latest tag from remote registry (GHCR, Docker Hub, etc.)
-      await new Promise<void>((resolve, reject) => {
-        docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
-          if (err) return reject(err);
-          docker.modem.followProgress(stream, (progressErr: Error | null) => {
-            if (progressErr) return reject(progressErr);
-            resolve();
-          });
-        });
-      });
-
-      // Get inspect details of the freshly pulled image tag
-      const latestImageObj = docker.getImage(imageName);
-      const latestImageInspect = await latestImageObj.inspect();
-      const latestImageId = latestImageInspect.Id;
-
-      // If running image ID != newly pulled image ID, an update is available!
-      const hasUpdate = currentRunningImageId !== latestImageId;
-
-      if (hasUpdate) {
-        updatesFound++;
-        console.log(`[imgnurd] Update detected for ${c.Names[0]}: Running=${currentRunningImageId.substring(0, 12)} vs Latest=${latestImageId.substring(0, 12)}`);
-      }
-
-      updateCache.set(c.Id, {
-        updateAvailable: hasUpdate,
-        checkedAt: now
-      });
-    } catch (err: any) {
-      console.warn(`[imgnurd] Could not check registry for ${c.Image}:`, err.message);
-      updateCache.set(c.Id, {
-        updateAvailable: false,
-        checkedAt: `${now} (Error)`
-      });
+      const image = docker.getImage(c.Image);
+      await image.inspect();
+    } catch (err) {
+      console.warn(`[imgnurd] Could not inspect image ${c.Image}:`, err);
     }
   }
 
@@ -115,7 +65,7 @@ export async function checkForUpdates(): Promise<{ total: number; updatesFound: 
 }
 
 /**
- * Handles standard container recreation or delegates self-updates to a sidecar container.
+ * Safely update container or spawn sidecar helper if updating self
  */
 export async function safeUpdateContainer(containerId: string): Promise<{ success: boolean; message: string }> {
   try {
@@ -123,52 +73,52 @@ export async function safeUpdateContainer(containerId: string): Promise<{ succes
     const inspectData = await container.inspect();
     const rawName = inspectData.Name.replace(/^\//, '');
     const imageName = inspectData.Config.Image;
-    const isSelf = rawName.toLowerCase() === 'imgnurd' || imageName.toLowerCase().includes('imgnurd');
+    const isSelf = rawName === 'imgnurd' || imageName.includes('imgnurd');
 
     if (isSelf) {
       return await spawnSelfUpdater(containerId, rawName, imageName, inspectData);
     }
 
-    console.log(`[imgnurd] Recreating container ${rawName}...`);
+    // Standard non-self container recreation
+    console.log(`[imgnurd] Pulling updated image: ${imageName}...`);
+    await new Promise<void>((resolve, reject) => {
+      docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
+        if (err) return reject(err);
+        docker.modem.followProgress(stream, (progressErr: Error | null) => {
+          if (progressErr) return reject(progressErr);
+          resolve();
+        });
+      });
+    });
 
-    const containerConfig = {
-      ...inspectData.Config,
-      HostConfig: inspectData.HostConfig,
-      NetworkingConfig: {
-        EndpointsConfig: inspectData.NetworkSettings.Networks
-      },
-      name: rawName
-    };
-
+    console.log(`[imgnurd] Stopping existing container ${rawName}...`);
     await container.stop();
     await container.remove();
 
-    const newContainer = await docker.createContainer(containerConfig);
+    console.log(`[imgnurd] Recreating container ${rawName}...`);
+    const newContainer = await docker.createContainer({
+      ...inspectData.Config,
+      name: rawName,
+      HostConfig: inspectData.HostConfig
+    });
+
     await newContainer.start();
 
-    // Reset update status in cache
-    updateCache.set(inspectData.Id, {
-      updateAvailable: false,
-      checkedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    });
-
-    await notifier.send({
-      title: 'Container Updated',
-      message: `Container ${rawName} was successfully recreated using the latest ${imageName} image.`,
-      type: 'success',
-      containerName: rawName,
-      imageName: imageName
-    });
-
-    return { success: true, message: `Successfully updated and recreated ${rawName}.` };
+    return {
+      success: true,
+      message: `Container ${rawName} updated and restarted successfully!`
+    };
   } catch (err: any) {
-    console.error(`[imgnurd] Update failed for container ${containerId}:`, err.message);
-    return { success: false, message: `Failed to update: ${err.message}` };
+    console.error(`[imgnurd] Update failed for container ${containerId}:`, err);
+    return {
+      success: false,
+      message: `Update failed: ${err.message}`
+    };
   }
 }
 
 /**
- * Spawns a temporary docker:cli sidecar helper to update imgnurd itself.
+ * Helper to handle imgnurd self-updating via temporary sidecar container while preserving volumes
  */
 async function spawnSelfUpdater(
   containerId: string,
@@ -176,12 +126,32 @@ async function spawnSelfUpdater(
   imageName: string,
   inspectData: any
 ): Promise<{ success: boolean; message: string }> {
-  console.log(`[imgnurd] Spawning sidecar helper to update imgnurd (${rawName})...`);
+  console.log(`[imgnurd] Preparing sidecar helper to update imgnurd (${rawName})...`);
 
   const socketBinding = isWindows
     ? '//./pipe/docker_engine://./pipe/docker_engine'
     : '/var/run/docker.sock:/var/run/docker.sock';
   const helperImage = 'docker:cli';
+
+  // Extract existing volume binds (e.g. data directory or settings file)
+  const existingBinds: string[] = inspectData.HostConfig?.Binds || [];
+  
+  // Format binds into -v arguments for docker run, defaulting to a persistent volume for /app/data if none set
+  let volumeArgs = existingBinds.length > 0
+    ? existingBinds.map(b => `-v "${b}"`).join(' ')
+    : '-v imgnurd-data:/app/data -v /var/run/docker.sock:/var/run/docker.sock';
+
+  // Extract existing port mappings
+  const portBindings = inspectData.HostConfig?.PortBindings || {};
+  let portArgs = '-p 3000:3000';
+  const mappedPorts = Object.keys(portBindings);
+  if (mappedPorts.length > 0) {
+    const containerPort = mappedPorts[0];
+    const hostPort = portBindings[containerPort]?.[0]?.HostPort;
+    if (hostPort) {
+      portArgs = `-p ${hostPort}:${containerPort.replace('/tcp', '')}`;
+    }
+  }
 
   const updateScript = `
     echo "[imgnurd-updater] Waiting for main container to stop..."
@@ -192,13 +162,13 @@ async function spawnSelfUpdater(
     docker stop ${rawName} || true
     echo "[imgnurd-updater] Removing old container..."
     docker rm ${rawName} || true
-    echo "[imgnurd-updater] Starting new imgnurd container..."
-    docker run -d --name ${rawName} --restart=always -v /var/run/docker.sock:/var/run/docker.sock -p 3000:3000 ${imageName}
+    echo "[imgnurd-updater] Starting new imgnurd container with volume mounts..."
+    docker run -d --name ${rawName} --restart=always ${portArgs} ${volumeArgs} ${imageName}
     echo "[imgnurd-updater] Update complete! Cleaning up self..."
   `;
 
   try {
-    console.log(`[imgnurd] Ensuring helper container engine image (${helperImage}) is ready...`);
+    console.log(`[imgnurd] Ensuring sidecar engine image (${helperImage}) is ready...`);
     await new Promise<void>((resolve, reject) => {
       docker.pull(helperImage, (err: Error | null, stream: NodeJS.ReadableStream) => {
         if (err) return reject(err);
@@ -209,6 +179,7 @@ async function spawnSelfUpdater(
       });
     });
 
+    console.log(`[imgnurd] Creating helper container 'imgnurd-updater-tmp'...`);
     const helperContainer = await docker.createContainer({
       Image: helperImage,
       name: 'imgnurd-updater-tmp',
@@ -223,7 +194,7 @@ async function spawnSelfUpdater(
 
     return {
       success: true,
-      message: 'Self-update initiated. The dashboard will restart in approximately 10 seconds with the new build.'
+      message: 'Self-update initiated. The dashboard will restart in approximately 10 seconds with saved settings intact.'
     };
   } catch (err: any) {
     console.error('[imgnurd] Failed to spawn self-updater helper:', err.message);

@@ -30,10 +30,14 @@ services:
       - "3000:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./data:/app/data
+      - imgnurd-data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3000
+
+volumes:
+  imgnurd-data:
+    name: imgnurd-data
 ```
 
 Run to start
