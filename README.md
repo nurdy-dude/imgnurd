@@ -23,21 +23,17 @@ version: '3.8'
 
 services:
   imgnurd:
-    image: ghcr.io/${{ github.repository_owner }}/imgnurd:latest
+    image: ghcr.io/nurdy-dude/imgnurd:latest
     container_name: imgnurd
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - imgnurd-data:/app/data
+      - /var/lib/imgnurd/data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3000
-
-volumes:
-  imgnurd-data:
-    name: imgnurd-data
 ```
 
 Run to start
