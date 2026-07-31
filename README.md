@@ -11,7 +11,6 @@
 - **One-Click Container Updates:** Instantly pull, recreate, and restart containers with updated image tags.
 - **Multi-Channel Webhook Notifications:** Send update alerts directly to Discord, Slack, Gotify, or Telegram.
 - **Self-Management Safe Guard:** Automatically disables direct self-recreation on `imgnurd` to prevent corrupting runtime socket states.
-- **Modern Responsive UI:** Dark glassmorphism dashboard themed in signature **Nurdy Yellow (`#FFD600`)**.
 
 ---
 
