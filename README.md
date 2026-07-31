@@ -5,6 +5,10 @@
 
 ---
 
+<img width="1360" height="918" alt="dashboard" src="https://github.com/user-attachments/assets/40fd8ef9-61b3-4921-a62a-e27bc1056f90" />
+
+---
+
 ## ⚡ Features
 
 - **Real-Time Container Overview:** Monitor container status, health, ports, and image tags.
