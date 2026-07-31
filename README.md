@@ -36,7 +36,7 @@ services:
       - PORT=3000
 ```
 
-Run to start
+Run compose to start
 
 ```
 docker compose up -d
